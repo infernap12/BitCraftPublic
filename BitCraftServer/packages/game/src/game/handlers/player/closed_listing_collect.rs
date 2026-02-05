@@ -4,7 +4,7 @@ use crate::{
     game::{discovery::Discovery, game_state},
     messages::{
         action_request::PlayerClosedListingCollectRequest,
-        components::{building_state, closed_listing_state, HealthState, InventoryState},
+        components::{building_state, closed_listing_state, mobile_entity_state, HealthState, InventoryState},
     },
     unwrap_or_err,
 };
@@ -20,6 +20,11 @@ pub fn closed_listing_collect(ctx: &ReducerContext, request: PlayerClosedListing
         "Building does not exist"
     );
 
+    let coordinates = ctx.db.mobile_entity_state().entity_id().find(actor_id).unwrap().coordinates();
+    if building.distance_to(ctx, &coordinates) > 5 {
+        return Err("Too far".into());
+    }
+
     let claim_entity_id = building.claim_entity_id;
 
     // Find all sell_orders matching the price and item id, and collect items from those, sorted by increasing price (with timestamp for tie-breaking)
@@ -27,6 +32,10 @@ pub fn closed_listing_collect(ctx: &ReducerContext, request: PlayerClosedListing
         ctx.db.closed_listing_state().entity_id().find(request.auction_listing_entity_id),
         "This listing no longer exists"
     );
+
+    if listing.owner_entity_id != actor_id {
+        return Err("You are not the owner of this listing".into());
+    }
 
     if listing.claim_entity_id != claim_entity_id {
         return Err("You cannot collect this listing from there".into());

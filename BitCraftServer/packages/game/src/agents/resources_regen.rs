@@ -5,6 +5,7 @@ use spacetimedb::rand::Rng;
 use spacetimedb::{log, ReducerContext, Table};
 
 use crate::game::coordinates::*;
+use crate::game::game_state::game_state_filters;
 use crate::game::terrain_chunk::TerrainChunkCache;
 use crate::game::unity_helpers::vector2::Vector2;
 use crate::game::world_gen::resources_log::{resources_log, ResourceClumpInfo};
@@ -809,8 +810,14 @@ fn is_valid_resource_footprint(
             return false;
         }
 
-        if !spawns_on_uneven_terrain && footprint_elevation != center_elevation {
-            return false;
+        if !spawns_on_uneven_terrain {
+            if footprint_coordinates.is_corner() && !game_state_filters::is_flat_corner(ctx, terrain_cache, footprint_coordinates) {
+                return false;
+            }
+
+            if footprint_elevation != center_elevation {
+                return false;
+            }
         }
     }
 

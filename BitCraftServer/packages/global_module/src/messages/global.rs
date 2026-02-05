@@ -247,3 +247,13 @@ pub struct PremiumPurchaseState {
     #[default(1)]
     pub quantity: u32,
 }
+
+#[spacetimedb::table(name = minimum_client_version, public, index(name = platform, btree(columns = [platform])))]
+#[derive(Clone, Debug)]
+pub struct MinimumClientVersion {
+    #[primary_key]
+    #[auto_inc]
+    pub entity_id: u64,
+    pub platform: String,
+    pub build_number: u32,
+}

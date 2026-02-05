@@ -204,7 +204,7 @@ impl BuildingState {
         {
             inter_module::send_inter_module_message(
                 ctx,
-                crate::messages::inter_module::MessageContentsV3::EmpireCreateBuilding(EmpireCreateBuildingMsg {
+                crate::messages::inter_module::MessageContentsV4::EmpireCreateBuilding(EmpireCreateBuildingMsg {
                     player_entity_id,
                     building_entity_id,
                     location: location.into(),

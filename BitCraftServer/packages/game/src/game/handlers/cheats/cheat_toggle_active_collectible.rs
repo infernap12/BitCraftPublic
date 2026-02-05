@@ -39,7 +39,10 @@ pub fn reduce(ctx: &ReducerContext, player_id: u64, collectible_id: i32) -> Resu
         let _ = vault.add_collectible(ctx, collectible_id, false);
     }
 
-    if collectible.collectible_type != CollectibleType::Deployable {
+    if collectible.collectible_type != CollectibleType::Deployable
+        && collectible.collectible_type != CollectibleType::HousingFloor
+        && collectible.collectible_type != CollectibleType::HousingWalls
+    {
         // go through all collectibles and deactivate all others of the this type
         for i in 0..vault.collectibles.len() {
             let desc = ctx.db.collectible_desc().id().find(&vault.collectibles[i].id).unwrap();

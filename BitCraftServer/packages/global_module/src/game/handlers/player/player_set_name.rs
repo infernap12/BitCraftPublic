@@ -3,13 +3,14 @@ use spacetimedb::{ReducerContext, Table};
 
 use crate::{
     game::{game_state, handlers::authentication::has_role},
+    i18n,
     inter_module::{send_inter_module_message, InterModuleDestination},
     messages::{
         action_request::PlayerSetNameRequest,
         authentication::Role,
         components::*,
         global::user_region_state,
-        inter_module::{MessageContentsV3, OnPlayerNameSetMsg},
+        inter_module::{MessageContentsV4, OnPlayerNameSetMsg},
         static_data::reserved_name_desc,
     },
     unwrap_or_err,
@@ -64,7 +65,7 @@ pub fn reduce(ctx: &ReducerContext, entity_id: u64, username: String) -> Result<
     };
     send_inter_module_message(
         ctx,
-        MessageContentsV3::OnPlayerNameSetRequest(msg),
+        MessageContentsV4::OnPlayerNameSetRequest(msg),
         InterModuleDestination::Region(player_region),
     );
 
@@ -85,7 +86,7 @@ pub fn validate_username(ctx: &ReducerContext, entity_id: u64, username: &String
 
     //Allows letters, accented letters and numbers
     let regex = Regex::new(r"^[\p{L}\p{N}]+$").unwrap();
-    if !regex.is_match(&username) {
+    if !regex.is_match(&username) || !i18n::is_sanitized(username) {
         return Err("Invalid username.".into());
     }
 

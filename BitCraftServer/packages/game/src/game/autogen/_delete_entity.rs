@@ -86,6 +86,7 @@ use crate::paved_tile_state;
 use crate::permission_state;
 use crate::pillar_shaping_state;
 use crate::player_action_state;
+use crate::player_housing_customization_state;
 use crate::player_housing_moving_cost_state;
 use crate::player_housing_state;
 use crate::player_lowercase_username_state;
@@ -303,6 +304,7 @@ pub fn clear_entity(ctx: &ReducerContext, entity_id: u64) {
    ctx.db.permission_state().entity_id().delete(entity_id);
    ctx.db.pillar_shaping_state().entity_id().delete(entity_id);
    ctx.db.player_action_state().entity_id().delete(entity_id);
+   ctx.db.player_housing_customization_state().entity_id().delete(entity_id);
    ctx.db.player_housing_moving_cost_state().entity_id().delete(entity_id);
    ctx.db.player_housing_state().entity_id().delete(entity_id);
    ctx.db.player_lowercase_username_state().entity_id().delete(entity_id);

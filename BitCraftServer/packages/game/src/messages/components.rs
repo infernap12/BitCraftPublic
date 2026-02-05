@@ -1720,6 +1720,15 @@ pub struct PlayerHousingState {
 }
 
 #[derive(Clone, Debug)]
+#[spacetimedb::table(name = player_housing_customization_state, public)]
+pub struct PlayerHousingCustomizationState {
+    #[primary_key]
+    pub entity_id: u64,
+    pub wall_collectible_id: i32,
+    pub floor_collectible_id: i32,
+}
+
+#[derive(Clone, Debug)]
 #[spacetimedb::table(name = player_housing_moving_cost_state, public)]
 pub struct PlayerHousingMovingCostState {
     #[primary_key]
@@ -1955,6 +1964,7 @@ pub enum AbilityType {
     DeployableDeploy(i32),      // Collectible ID - likely unused, replaced by DeployableToggle
     AddToToolbelt(i32),         // Item Id
     DeployableToggle(i32),      // Collectible ID - will call either Store or Deploy based on the collectible state
+    Emote(i32),                 // Collectible ID
 }
 
 // Keep in sync with AbilityType
@@ -1972,6 +1982,7 @@ pub enum AbilityTypeEnum {
     DeployableDeploy,       // - likely unused, replaced by DeployableToggle
     AddToToolbelt,
     DeployableToggle,
+    Emote,
 }
 
 #[spacetimedb::table(name = action_bar_state, public,

@@ -448,6 +448,11 @@ impl PlayerHousingState {
         };
         ctx.db.player_housing_moving_cost_state().insert(player_housing_moving_cost_state);
 
+        ctx.db.player_housing_customization_state().insert(PlayerHousingCustomizationState {
+            entity_id: actor_id,
+            wall_collectible_id: 0,
+            floor_collectible_id: 0,
+        });
         Ok(())
     }
 

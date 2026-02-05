@@ -1,5 +1,7 @@
 use regex::Regex;
 
+use crate::i18n;
+
 // Sanitize player text input
 // https://www.notion.so/clockworklabs/Sanitize-player-text-input-776195ca4b304ca386abf5e56a4ffb45
 pub fn is_user_text_input_valid(user_input_source: &String, max_length: usize, allow_alphanumeric_only: bool) -> Result<(), String> {
@@ -32,6 +34,11 @@ pub fn is_user_text_input_valid(user_input_source: &String, max_length: usize, a
             return Err(format!("user_input contains non-alphanumeric values : {{0}}|~{}", user_input).into());
         }
     }
+
+    if !i18n::is_sanitized(user_input) {
+        return Err(format!("user_input contains forbidden character sequence : '{{0}}'|~{}", user_input).into());
+    }
+
     Ok(())
 }
 
@@ -47,7 +54,8 @@ pub fn is_user_text_input_valid(user_input_source: &String, max_length: usize, a
 // hi < i'm doing som < and > bye                             -> hi  bye
 pub fn sanitize_user_inputs(user_input_source: &String) -> String {
     let regex = Regex::new(r"<[^>]*>").unwrap();
-    let result = regex.replace_all(&user_input_source, "");
+    let result = regex.replace_all(&user_input_source, "").to_string();
+    let result = i18n::sanitize_string(result);
 
-    return result.to_string().trim().to_owned();
+    return result.trim().to_owned();
 }

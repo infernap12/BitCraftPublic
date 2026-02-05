@@ -6,7 +6,7 @@ use crate::inter_module::send_inter_module_message;
 use crate::messages::authentication::Role;
 use crate::messages::components::*;
 use crate::messages::global::{player_shard_state, user_region_state, PlayerVoteState, PlayerVoteType};
-use crate::messages::inter_module::{MessageContentsV3, OnEmpireBuildingDeletedMsg, OnPlayerLeftEmpireMsg};
+use crate::messages::inter_module::{MessageContentsV4, OnEmpireBuildingDeletedMsg, OnPlayerLeftEmpireMsg};
 use crate::messages::static_data::*;
 use crate::{empire_rank_desc, empire_territory_desc, parameters_desc_v2, unwrap_or_err, SmallHexTile, TerrainChunkState};
 use bitcraft_macro::shared_table_reducer;
@@ -324,7 +324,7 @@ pub fn empire_player_leave(ctx: &ReducerContext, request: EmpirePlayerLeaveReque
     let region = unwrap_or_err!(ctx.db.user_region_state().identity().find(ctx.sender), "Region not found").region_id;
     send_inter_module_message(
         ctx,
-        crate::messages::inter_module::MessageContentsV3::OnPlayerLeftEmpire(OnPlayerLeftEmpireMsg {
+        crate::messages::inter_module::MessageContentsV4::OnPlayerLeftEmpire(OnPlayerLeftEmpireMsg {
             player_entity_id: actor_id,
             empire_entity_id: request.empire_entity_id,
         }),
@@ -840,12 +840,17 @@ pub fn empire_set_directive_message(ctx: &ReducerContext, request: EmpireSetDire
         "Empire no longer exists."
     );
 
+    if request.message.len() > 320 {
+        return Err("Message is too long".into());
+    }
+    let sanitized_message = sanitize_user_inputs(&request.message);
+
     let timestamp = match request.message.is_empty() {
         true => None,
         false => Some(ctx.timestamp),
     };
 
-    directive.directive_message = request.message;
+    directive.directive_message = sanitized_message;
     directive.directive_message_timestamp = timestamp;
 
     ctx.db.empire_directive_state().entity_id().update(directive);
@@ -1148,7 +1153,7 @@ pub fn delete_empire_building(ctx: &ReducerContext, player_entity_id: u64, build
         let region = game_state::region_index_from_entity_id(building_entity_id);
         send_inter_module_message(
             ctx,
-            MessageContentsV3::OnEmpireBuildingDeleted(OnEmpireBuildingDeletedMsg {
+            MessageContentsV4::OnEmpireBuildingDeleted(OnEmpireBuildingDeletedMsg {
                 player_entity_id,
                 building_entity_id,
                 ignore_portals: false,

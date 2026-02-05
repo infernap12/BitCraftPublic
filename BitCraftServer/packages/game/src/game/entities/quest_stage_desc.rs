@@ -1,6 +1,6 @@
 use spacetimedb::{ReducerContext};
 
-use crate::{messages::{components::{InventoryState, vault_state}, static_data::{CompletionCondition, QuestStageDesc}}, unwrap_or_err};
+use crate::{game::discovery::Discovery, messages::{components::{InventoryState, vault_state}, static_data::{CompletionCondition, QuestStageDesc}}, unwrap_or_err};
 
 impl QuestStageDesc {
     pub fn fulfil_completion_conditions(&self, ctx: &ReducerContext, player_entity_id : u64) -> Result<(), String> {
@@ -35,7 +35,11 @@ impl QuestStageDesc {
 
                 CompletionCondition::Level(_) => {},
 
-                CompletionCondition::SecondaryKnowledge(_) => {},
+                CompletionCondition::SecondaryKnowledge(knowledge_id) => {
+                    if !Discovery::already_acquired_secondary(ctx, player_entity_id, *knowledge_id) {
+                        return Err("Missing required knowledge".into());
+                    }
+                },
 
                 CompletionCondition::EquippedItem(_) => {},
 

@@ -265,7 +265,7 @@ pub struct PlayerChatPostMessageRequest {
     pub text: String,
     pub channel_id: ChatChannel, // Only used for regional messages
     pub target_id: u64,          // Only used for targeted messages
-    pub language_code: String
+    pub language_code: String,
 }
 
 #[derive(SpacetimeType)]
@@ -1001,6 +1001,8 @@ pub struct PlayerRetrieveLostItemRequest {
     pub item_id: i32,
     pub is_cargo: bool,
     pub durability: i32,
+    pub target_inventory_entity_id: u64,
+    pub target_inventory_index: Option<i32>,
 }
 
 #[derive(SpacetimeType)]

@@ -303,6 +303,60 @@ impl InventoryState {
         has_filled_any
     }
 
+    pub fn add_partial_at(&mut self, ctx: &ReducerContext, item_stack: &mut ItemStack, pocket_index: usize) -> bool {
+        if item_stack.quantity <= 0 {
+            return false;
+        }
+
+        item_stack.fix_durability_self();
+
+        let item_type = item_stack.item_type;
+        let is_cargo = item_type == ItemType::Cargo;
+
+        let volume: i32;
+
+        let item_id = item_stack.item_id;
+        if is_cargo {
+            volume = match ctx.db.cargo_desc().id().find(&item_id) {
+                Some(c) => c.volume,
+                None => return false, // invalid cargo id, probably 0.
+            };
+        } else {
+            volume = match ctx.db.item_desc().id().find(&item_id) {
+                Some(i) => i.volume,
+                None => return false, // invalid item id, probably 0.
+            }
+        }
+
+        if self.is_pocket_cargo(pocket_index) != is_cargo {
+            return false;
+        }
+
+        let mut has_filled_any = false;
+
+        let p = self.pockets.get_mut(pocket_index).unwrap();
+
+        if let Some(content) = p.contents {
+            if content.item_id == item_id
+                && content.item_type == item_type
+                && content.durability.is_none()
+                && item_stack.durability.is_none()
+            {
+                let inserted_count = std::cmp::min(p.can_fit_quantity(ctx, volume, is_cargo), item_stack.quantity);
+                p.add_quantity(inserted_count);
+                item_stack.quantity -= inserted_count;
+                has_filled_any = true;
+            }
+        } else {
+            let inserted_count = std::cmp::min(p.can_fit_quantity(ctx, volume, is_cargo), item_stack.quantity);
+            self.pockets[pocket_index].set(item_id, item_type, inserted_count, item_stack.durability);
+            item_stack.quantity -= inserted_count;
+            has_filled_any = true;
+        }
+
+        has_filled_any
+    }
+
     pub fn remove_partial(&mut self, item_stack: &mut ItemStack) -> bool {
         if item_stack.quantity <= 0 {
             return false;
@@ -890,7 +944,13 @@ impl InventoryState {
 
             if let Some(mut wallet) = InventoryState::get_player_wallet(ctx, player_entity_id) {
                 for &stack_to_remove in item_stacks.iter() {
-                    if stack_to_remove.quantity <= 0 {
+                    // fail on negative quantities
+                    if stack_to_remove.quantity < 0 {
+                        log::warn!("Attempted to remove item stack with negative quantity from player inventory");
+                        return false;
+                    }
+
+                    if stack_to_remove.quantity == 0 {
                         success_count += 1;
                         continue;
                     }

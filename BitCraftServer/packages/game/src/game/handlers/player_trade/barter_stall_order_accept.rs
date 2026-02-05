@@ -99,6 +99,10 @@ pub fn reduce(ctx: &ReducerContext, entity_id: u64, shop_entity_id: u64, trade_o
         "Trade order could not be found!"
     );
 
+    if trade_order.shop_entity_id != shop_entity_id {
+        return Err("This trade order can't be accepted here".into());
+    }
+
     // Is this out of stock?
     if trade_order.remaining_stock <= 0 {
         return Err("No more stock available for this trade order!".into());
@@ -355,6 +359,8 @@ pub fn reduce(ctx: &ReducerContext, entity_id: u64, shop_entity_id: u64, trade_o
             }
             ctx.db.inventory_state().entity_id().update(cargo_inventory);
         }
+    } else if ctx.db.npc_state().building_entity_id().filter(shop_entity_id).next().is_none() {
+        return Err("The offered items are not available".into());
     }
 
     if trade_order.remaining_stock != i32::MAX {

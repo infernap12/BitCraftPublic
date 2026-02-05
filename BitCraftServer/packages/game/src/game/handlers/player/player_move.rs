@@ -21,7 +21,8 @@ pub fn player_move(ctx: &ReducerContext, mut request: PlayerMoveRequest) -> Resu
     }
 
     if request.running && InventoryState::get_player_cargo_id(ctx, actor_id) > 0 {
-        return Err("Can't run with cargo.".into());
+        // even if the client says running, we override it if they are carrying cargo
+        request.running = false;
     }
 
     let player_stats = ctx.db.character_stats_state().entity_id().find(&actor_id).unwrap();

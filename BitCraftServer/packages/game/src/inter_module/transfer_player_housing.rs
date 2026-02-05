@@ -5,7 +5,8 @@ use crate::{
     messages::{
         action_request::ServerTeleportReason,
         components::*,
-        inter_module::{MessageContentsV3, TransferPlayerHousingMsg},
+        inter_module::{MessageContentsV4, TransferPlayerHousingMsg},
+        static_data::{collectible_desc, CollectibleType},
     },
     unwrap_or_err,
 };
@@ -17,7 +18,7 @@ pub fn send_message(ctx: &ReducerContext, player_housing_entity_id: u64, new_ent
     if let Some(player_housing) = ctx.db.player_housing_state().entity_id().find(player_housing_entity_id) {
         send_inter_module_message(
             ctx,
-            MessageContentsV3::TransferPlayerHousingRequest(TransferPlayerHousingMsg {
+            MessageContentsV4::TransferPlayerHousingRequest(TransferPlayerHousingMsg {
                 player_entity_id: player_housing_entity_id,
                 new_entrance_building_entity_id,
                 network_entity_id: player_housing.network_entity_id,
@@ -53,6 +54,7 @@ pub fn process_message_on_destination(ctx: &ReducerContext, msg: TransferPlayerH
 
     // delete player housing cost
     ctx.db.player_housing_moving_cost_state().entity_id().delete(msg.player_entity_id);
+    ctx.db.player_housing_customization_state().entity_id().delete(msg.player_entity_id);
 
     // Destroy dimension network
     interior_helpers::delete_dimension_network(ctx, msg.network_entity_id, oc.into());
@@ -77,6 +79,25 @@ pub fn handle_destination_result_on_sender(ctx: &ReducerContext, request: Transf
     ctx.db.player_housing_moving_cost_state().insert(PlayerHousingMovingCostState {
         entity_id: actor_id,
         moving_time_cost_minutes: 0,
+    });
+
+    let vault = ctx.db.vault_state().entity_id().find(request.player_entity_id).unwrap();
+    let wall_collectible_id = vault
+        .collectibles
+        .iter()
+        .find(|c| ctx.db.collectible_desc().id().find(c.id).unwrap().collectible_type == CollectibleType::HousingWalls)
+        .unwrap()
+        .id;
+    let floor_collectible_id = vault
+        .collectibles
+        .iter()
+        .find(|c| ctx.db.collectible_desc().id().find(c.id).unwrap().collectible_type == CollectibleType::HousingFloor)
+        .unwrap()
+        .id;
+    ctx.db.player_housing_customization_state().insert(PlayerHousingCustomizationState {
+        entity_id: actor_id,
+        wall_collectible_id,
+        floor_collectible_id,
     });
 
     // transfer housing here.

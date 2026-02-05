@@ -969,6 +969,8 @@ pub enum CollectibleType {
     ClothesCape,
     PremiumItem,
     Emote,
+    HousingWalls,
+    HousingFloor,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, spacetimedb::SpacetimeType)]
@@ -1114,6 +1116,8 @@ pub enum EnemyType {
     SpiderDungeonEliteSpider = 38,
     SpiderDungeonSmallSpider = 39,
     SpiderDungeonSpiderNest = 40,
+
+    EnragedAlphaJakyl = 41,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, spacetimedb::SpacetimeType)]

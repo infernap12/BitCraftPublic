@@ -37,11 +37,10 @@ pub fn reduce(
         return Err(format!("Can't send empty chat message"));
     }
 
-    if let Err(_) = is_user_text_input_valid(&text, 250, false) {
+    let sanitized_user_input = sanitize_user_inputs(&text);
+    if let Err(_) = is_user_text_input_valid(&sanitized_user_input, 250, false) {
         return Err("Failed to send chat messages".into());
     }
-
-    let sanitized_user_input = sanitize_user_inputs(&text);
 
     let player_state = unwrap_or_err!(ctx.db.player_state().entity_id().find(&actor_id), "Invalid player");
 

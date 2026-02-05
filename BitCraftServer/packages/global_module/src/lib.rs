@@ -6,6 +6,7 @@ pub mod import_reducers;
 pub mod inter_module;
 pub mod macros;
 pub mod messages;
+pub mod translations;
 pub mod utils;
 
 use crate::game::coordinates::*;

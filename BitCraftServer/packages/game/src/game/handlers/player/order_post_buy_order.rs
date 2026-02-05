@@ -30,6 +30,10 @@ pub fn order_post_buy_order(ctx: &ReducerContext, request: PlayerPostOrderReques
         return Err("Invalid coins".into());
     }
 
+    if request.coins_spent != request.max_unit_price * request.quantity {
+        return Err("Coins don't match the offer".into());
+    }
+
     let building = unwrap_or_err!(
         ctx.db.building_state().entity_id().find(request.building_entity_id),
         "Building does not exist"

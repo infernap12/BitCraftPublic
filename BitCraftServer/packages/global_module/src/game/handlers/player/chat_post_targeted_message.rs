@@ -23,7 +23,8 @@ pub fn reduce(ctx: &ReducerContext, actor_id: u64, text: String, target_entity_i
         return Err(format!("Can't send empty chat message"));
     }
 
-    if let Err(_) = is_user_text_input_valid(&text, 250, false) {
+    let sanitized_user_input = sanitize_user_inputs(&text);
+    if let Err(_) = is_user_text_input_valid(&sanitized_user_input, 250, false) {
         return Err("Failed to send chat messages".into());
     }
 
@@ -32,7 +33,6 @@ pub fn reduce(ctx: &ReducerContext, actor_id: u64, text: String, target_entity_i
     let username = unwrap_or_err!(ctx.db.player_username_state().entity_id().find(actor_id), "Invalid player").username;
 
     let timestamp = unix(ctx.timestamp);
-    let sanitized_user_input = sanitize_user_inputs(&text);
 
     //TODO: Add a mapping from Role to CollectibleId somewhere
     let title_id = match ctx.db.identity_role().identity().find(ctx.sender) {

@@ -301,6 +301,12 @@ fn reduce(
         }
     }
 
+    for required_knowledge_id in &recipe.required_knowledges {
+        if !Discovery::already_acquired_secondary(ctx, actor_id, *required_knowledge_id) {
+            return Err("You don't have the knowledge required to perform this action".into());
+        }
+    }
+
     // validation is complete
     if !dry_run {
         if !StaminaState::decrease_stamina(ctx, actor_id, recipe.stamina_requirement as f32) {

@@ -7,6 +7,10 @@ pub fn claim_set_protection_threshold(ctx: &ReducerContext, building_entity_id: 
     let actor_id = game_state::actor_id(&ctx, true)?;
     PlayerTimestampState::refresh(ctx, actor_id, ctx.timestamp);
 
+    if hours > 2400 {
+        return Err("Invalid protection threshold value".into());
+    }
+
     let building = unwrap_or_err!(
         ctx.db.building_state().entity_id().find(&building_entity_id),
         "No such building to repair."

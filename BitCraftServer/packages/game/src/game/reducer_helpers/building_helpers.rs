@@ -428,7 +428,7 @@ pub fn delete_building(
     if let Some(empire) = ctx.db.empire_state().capital_building_entity_id().find(&building.entity_id) {
         send_inter_module_message(
             ctx,
-            crate::messages::inter_module::MessageContentsV3::DeleteEmpire(DeleteEmpireMsg {
+            crate::messages::inter_module::MessageContentsV4::DeleteEmpire(DeleteEmpireMsg {
                 empire_entity_id: empire.entity_id,
             }),
             crate::inter_module::InterModuleDestination::Global,
@@ -554,7 +554,7 @@ pub fn delete_building(
     {
         send_inter_module_message(
             ctx,
-            crate::messages::inter_module::MessageContentsV3::GlobalDeleteEmpireBuilding(GlobalDeleteEmpireBuildingMsg {
+            crate::messages::inter_module::MessageContentsV4::GlobalDeleteEmpireBuilding(GlobalDeleteEmpireBuildingMsg {
                 player_entity_id: actor_id,
                 building_entity_id: entity_id,
             }),

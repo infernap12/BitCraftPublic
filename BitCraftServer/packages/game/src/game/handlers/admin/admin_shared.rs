@@ -3,7 +3,7 @@ use spacetimedb::{ReducerContext, Table};
 
 use crate::game::game_state::{create_entity, unix};
 use crate::messages::action_request::CreatePlayerReportRequest;
-use crate::messages::components::{chat_message_state, player_username_state, ChatChannel, ChatMessageState, PlayerReportState};
+use crate::messages::components::{chat_message_state, player_report_state, player_username_state, ChatChannel, ChatMessageState, PlayerReportState};
 use crate::{game::handlers::authentication::has_role, messages::authentication::Role, unwrap_or_err};
 
 const CONTEXT_SIZE: usize = 5;
@@ -76,6 +76,36 @@ pub fn admin_delete_chat_message(ctx: &ReducerContext, entity_id: u64) -> Result
     );
 
     ctx.db.chat_message_state().delete(chat_message);
+
+    Ok(())
+}
+
+#[shared_table_reducer]
+#[spacetimedb::reducer]
+pub fn admin_create_entity_name_report(
+    ctx: &ReducerContext,
+    report_type: String,
+    entity_id: u64,
+    entity_name: String,
+    message: String,
+) -> Result<(), String> {
+    if !has_role(ctx, &ctx.sender, Role::Admin) {
+        return Err("Unauthorized".into());
+    }
+
+    let report_entity_id = create_entity(ctx);
+    ctx.db.player_report_state().insert(PlayerReportState {
+        entity_id: report_entity_id,
+        reporter_entity_id: 0, // Auto-mod
+        reported_player_entity_id: entity_id,
+        reported_player_username: entity_name,
+        report_type,
+        report_message: message,
+        reported_chat_message: None,
+        chat_channel_context: None,
+        chat_user_context: None,
+        actioned: false,
+    });
 
     Ok(())
 }

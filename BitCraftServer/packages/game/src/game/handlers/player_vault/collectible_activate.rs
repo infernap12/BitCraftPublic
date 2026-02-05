@@ -1,7 +1,10 @@
 use spacetimedb::ReducerContext;
 
 use crate::{
-    game::{discovery::Discovery, game_state},
+    game::{
+        discovery::Discovery,
+        game_state::{self, game_state_filters},
+    },
     messages::{action_request::PlayerCollectibleActivateRequest, components::*, static_data::*},
     unwrap_or_err,
 };
@@ -64,6 +67,29 @@ pub fn reduce(ctx: &ReducerContext, actor_id: u64, vault_index: i32, activated: 
         let col = &mut collectibles[i];
         if i as i32 == vault_index {
             col.activated = activated;
+
+            if collectible_desc.collectible_type == CollectibleType::HousingFloor
+                || collectible_desc.collectible_type == CollectibleType::HousingWalls
+            {
+                let dimension = game_state_filters::coordinates_any(ctx, actor_id).dimension;
+                if let Some(current_housing) = PlayerHousingState::from_dimension(ctx, dimension) {
+                    if current_housing.entity_id != actor_id {
+                        return Err("You must be inside your house to activate or deactivate housing collectibles".into());
+                    }
+                } else {
+                    return Err("You must be inside your house to activate or deactivate housing collectibles".into());
+                }
+                let mut housing_customization = ctx.db.player_housing_customization_state().entity_id().find(actor_id).unwrap();
+                if collectible_desc.collectible_type == CollectibleType::HousingFloor {
+                    housing_customization.floor_collectible_id = if activated { col.id } else { 0 };
+                } else {
+                    housing_customization.wall_collectible_id = if activated { col.id } else { 0 };
+                }
+                ctx.db
+                    .player_housing_customization_state()
+                    .entity_id()
+                    .update(housing_customization);
+            }
 
             if activated {
                 count += 1;

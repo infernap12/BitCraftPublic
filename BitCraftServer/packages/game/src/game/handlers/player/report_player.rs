@@ -21,7 +21,12 @@ pub fn report_chat_message(ctx: &ReducerContext, request: ReportPlayerChatMessag
         "Player not found"
     );
 
-    let channel_messages: Vec<ChatMessageState> = ctx.db.chat_message_state().channel_id().filter(chat.channel_id).collect();
+    let channel_messages: Vec<ChatMessageState> = ctx
+        .db
+        .chat_message_state()
+        .channel_and_target_id()
+        .filter((chat.channel_id, chat.target_id))
+        .collect();
     let msg_index = channel_messages.iter().position(|v| v.entity_id == chat.entity_id).unwrap();
     let start_index = msg_index - CONTEXT_SIZE.min(msg_index);
     let end_index = (msg_index + CONTEXT_SIZE).min(channel_messages.len());

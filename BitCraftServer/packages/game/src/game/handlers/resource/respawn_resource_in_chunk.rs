@@ -2,10 +2,14 @@ use spacetimedb::{log, rand::Rng, ReducerContext};
 
 use crate::{
     agents::resources_regen::{self, LazyMemoOccupiedTiles},
-    game::{handlers::authentication::has_role, terrain_chunk::TerrainChunkCache, world_gen::resources_log::single_resource_clump_info},
-    messages::authentication::Role,
-    parameters_desc_v2, resource_desc, resource_state, terrain_chunk_state, OffsetCoordinatesSmall, ResourceState, SmallHexTile,
-    TerrainChunkState,
+    game::{
+        handlers::authentication::has_role,
+        terrain_chunk::TerrainChunkCache,
+        world_gen::resources_log::{resources_log, single_resource_clump_info},
+    },
+    messages::{authentication::Role, static_data::resource_clump_desc},
+    parameters_desc_v2, resource_desc, resource_state, terrain_chunk_state, unwrap_or_err, OffsetCoordinatesSmall, ResourceState,
+    SmallHexTile, TerrainChunkState,
 };
 
 #[spacetimedb::table(name = respawn_resource_in_chunk_timer, scheduled(respawn_resource_in_chunk, at = scheduled_at))]
@@ -23,6 +27,27 @@ pub struct RespawnResourceInChunkTimer {
 pub fn respawn_resource_in_chunk(ctx: &ReducerContext, timer: RespawnResourceInChunkTimer) -> Result<(), String> {
     if !has_role(ctx, &ctx.sender, Role::Admin) {
         return Err("Invalid permissions".into());
+    }
+
+    let resources_log = unwrap_or_err!(ctx.db.resources_log().version().find(&0), "Failed to get resources_log");
+    let resource_clump = unwrap_or_err!(
+        ctx.db.resource_clump_desc().id().find(timer.resource_clump_id),
+        "Failed to get resource_clump_desc"
+    );
+
+    //Don't spawn this clump if any resources in the clump have a world target of 0
+    if resource_clump.resource_id.iter().any(|x| {
+        resources_log
+            .resources
+            .iter()
+            .find(|y| y.resource_id == *x)
+            .map_or(false, |z| z.world_target == 0)
+    }) {
+        log::info!(
+            "Skip respawning ResourceClump with id {} because all of its resources have a world_target of 0",
+            resource_clump.id
+        );
+        return Ok(());
     }
 
     // This reducer is expected to try a single-digit or low-two-digit number of times to spawn the resource,

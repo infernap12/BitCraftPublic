@@ -39,17 +39,17 @@ pub fn retrieve_lost_item(ctx: &ReducerContext, request: PlayerRetrieveLostItemR
     let building_coord: SmallHexTile = game_state_filters::coordinates_try_get(ctx, request.building_entity_id)?.into();
     let max_distance = params!(ctx).item_recovery_range;
 
-    let mut player_inventory = if request.item_id == TradeOrderState::MARKET_MODE_CURRENCY_ID && !request.is_cargo {
-        InventoryState::get_player_wallet(ctx, actor_id).unwrap()
-    } else {
-        InventoryState::get_player_inventory(ctx, actor_id).unwrap()
-    };
+    let mut target_inventory = ctx.db.inventory_state().entity_id().find(request.target_inventory_entity_id);
 
     // TODO, possibly: sort by distance so the closest inventories get depleted first.
     for lost_items in ctx.db.lost_items_state().owner_entity_id().filter(actor_id) {
         let coord: SmallHexTile = lost_items.location.into();
         if building_coord.distance_to(coord) <= max_distance {
             let mut inventory = ctx.db.inventory_state().entity_id().find(lost_items.inventory_entity_id).unwrap();
+            if target_inventory.is_some() && inventory.entity_id == target_inventory.as_ref().unwrap().entity_id {
+                continue;
+            }
+
             let mut updated_inventory = false;
             for i in 0..inventory.pockets.len() {
                 let pocket = inventory.pockets.get_mut(i).unwrap();
@@ -58,10 +58,21 @@ pub fn retrieve_lost_item(ctx: &ReducerContext, request: PlayerRetrieveLostItemR
                         if let Some(durability) = item_stack.durability {
                             // durability items are only picked one by one if the durability matches the query
                             if durability == request.durability {
-                                if !player_inventory.add(ctx, *item_stack) {
-                                    return Err("Not enough room in inventory".into());
+                                if target_inventory.is_some() {
+                                    if !target_inventory.unwrap().add(ctx, *item_stack) {
+                                        return Err("Not enough room in inventory".into());
+                                    }
+                                } else {
+                                    InventoryState::deposit_to_player_inventory_and_nearby_deployables(
+                                        ctx,
+                                        actor_id,
+                                        &vec![*item_stack],
+                                        |x| building.distance_to(ctx, &x),
+                                        false,
+                                        || vec![{ game_state_filters::coordinates_any(ctx, actor_id) }],
+                                        true,
+                                    )?;
                                 }
-                                ctx.db.inventory_state().entity_id().update(player_inventory);
                                 pocket.contents = None;
                                 ctx.db.inventory_state().entity_id().update(inventory);
                                 player_action_helpers::post_reducer_update_cargo(ctx, actor_id);
@@ -70,7 +81,27 @@ pub fn retrieve_lost_item(ctx: &ReducerContext, request: PlayerRetrieveLostItemR
                             continue;
                         }
                         // no durability items are always stacked
-                        updated_inventory = player_inventory.add_partial(ctx, item_stack);
+                        if target_inventory.is_some() {
+                            if let Some(i) = request.target_inventory_index {
+                                updated_inventory = target_inventory.as_mut().unwrap().add_partial_at(ctx, item_stack, i as usize);
+                            } else {
+                                updated_inventory = target_inventory.as_mut().unwrap().add_partial(ctx, item_stack);
+                            }
+                        } else {
+                            let overflow_items = InventoryState::deposit_to_player_inventory_and_nearby_deployables_and_get_overflow_stack(
+                                ctx,
+                                actor_id,
+                                &vec![*item_stack],
+                                |x| building.distance_to(ctx, &x),
+                                true,
+                            )?;
+                            if overflow_items.len() > 0 {
+                                item_stack.quantity = overflow_items[0].quantity;
+                            } else {
+                                pocket.contents = None;
+                            }
+                            updated_inventory = true;
+                        }
                     }
                 }
             }
@@ -85,7 +116,6 @@ pub fn retrieve_lost_item(ctx: &ReducerContext, request: PlayerRetrieveLostItemR
         }
     }
 
-    ctx.db.inventory_state().entity_id().update(player_inventory);
     player_action_helpers::post_reducer_update_cargo(ctx, actor_id);
 
     Ok(())

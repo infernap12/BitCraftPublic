@@ -83,6 +83,11 @@ fn reduce(
 
     let terrain = terrain_cache.get_terrain_cell(ctx, &player_coord.parent_large_tile()).unwrap();
 
+    // If a player isn't on a deployable and is in swim-deep water they aren't allowed to prospect
+    if terrain.player_should_swim() && ctx.db.mounting_state().entity_id().find(actor_id).is_none() {
+        return Err("Action disallowed while swimming".into());
+    }
+
     let mut player_prospecting = ctx.db.prospecting_state().entity_id().find(actor_id);
 
     // Destroy previous prospecting if we start a different kind. Client will show a confirmation pop-up so it doesn't happen accidentally.
